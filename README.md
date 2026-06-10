@@ -65,13 +65,90 @@ result = validate_lines(grid)
 
 ---
 
-## 테스트 (RED 묶음 1)
+## 테스트 플랜
 
-| ID | 시나리오 | 함수 |
-|----|----------|------|
-| T1 | 완성 격자 → `pass` | `test_pass_when_all_ten_lines_sum_to_magic` |
-| T2 | 한 줄 오류 → `fail` + 줄 정보 | `test_fail_reports_wrong_line_id_and_sum` |
-| T3 | `0` 포함 → `incomplete` | `test_incomplete_when_grid_contains_zero` |
+SSOT: [docs/PRD.md §7](docs/PRD.md#7-test-requirements--test-id) · Track B (Logic) · AAA — Arrange → Act(`validate_lines`) → Assert(dict)
+
+### FR ↔ Test ID
+
+| FR | 요구사항 (요약) | Test ID |
+|----|-----------------|--------|
+| FR-1 | 10선×MAGIC 한 번 검증 | T1 (설계) |
+| FR-2 | 완성 격자 → `pass` | T1 |
+| FR-3 | `0` 포함 → `incomplete` (R5) | T3 |
+| FR-4 | 합≠MAGIC → `fail` + 틀린 줄만 | T2, T4~T6 (후보) |
+| FR-5 | `failed_lines`에 `id`·`sum`·`expected` | T2 |
+| FR-6 | RED→GREEN→REFACTOR 분리 | 전 묶음 |
+
+### RED 묶음 1 — `validate_lines` (구현됨 · assert RED)
+
+| Test ID | FR | 파일 | 함수 | Given | Then (assert) | 상태 |
+|---------|-----|------|------|-------|---------------|------|
+| **T1** | FR-2 | `tests/test_validate_lines.py` | `test_pass_when_all_ten_lines_sum_to_magic` | `VALID_GRID` (10선 합 34) | `status=="pass"`, `failed_lines==[]` | RED ✅ · GREEN ❌ |
+| **T2** | FR-4, FR-5 | 동일 | `test_fail_reports_wrong_line_id_and_sum` | `grid[0][0]=99` | `status=="fail"`, `failed_lines==[{"id":"row:0",…}]` | RED ✅ · GREEN ❌ |
+| **T3** | FR-3 | 동일 | `test_incomplete_when_grid_contains_zero` | `grid[0][0]=0` | `status=="incomplete"`, `failed_lines==[]` | RED ✅ · GREEN ❌ |
+
+```bash
+# 묶음 1 전체
+python -m pytest tests/test_validate_lines.py -v
+
+# 단일 Test ID
+python -m pytest tests/test_validate_lines.py::test_pass_when_all_ten_lines_sum_to_magic -v
+```
+
+**픽스처:** `VALID_GRID` — 테스트 파일 내 상수. 변형은 `[row[:] for row in VALID_GRID]`로 복사 후 수정.
+
+**현재 pytest:** `3 failed` (의도적) — `validate_lines` 본문 미구현 → `None` 반환.
+
+### RED 후보 — 미구현
+
+| Test ID | 시나리오 | 예정 파일·함수 | 비고 |
+|---------|----------|----------------|------|
+| **T4** | `diag:main` 실패 보고 | `tests/test_validate_lines.py` | 대각선 누락 방지 (Mom Test E1) |
+| **T5** | 복수 `failed_lines` | 동일 | 틀린 줄 여러 개 |
+| **T6** | `diag:anti` 실패 | 동일 | 부대각 |
+| **D-LOC-01** | `grid_g1` 빈칸 좌표 row-major | `tests/entity/test_d_loc_01.py` · `test_d_loc_01_blank_coords_row_major` | G1 빈칸 `(1,3)`, `(2,2)` 0-index · [§4.4](docs/PRD.md#44-예시-격자-g1-과제-슬라이드) |
+
+```bash
+# D-LOC-01 (설계·플랜 완료, 파일 미생성)
+python -m pytest tests/entity/test_d_loc_01.py::test_d_loc_01_blank_coords_row_major -v
+```
+
+**예정 conftest:** `tests/conftest.py` — `grid_g1` (빈칸 2개). `entity.constants`의 `MAGIC`·`GRID_SIZE` import만.
+
+### Golden Master (선택 · post-GREEN)
+
+| 항목 | 규격 |
+|------|------|
+| 헬퍼 | `tests/_approval.py` — `assert_matches_golden` |
+| baseline | `tests/golden/{id}.approved.txt` |
+| 갱신 | `UPDATE_GOLDEN=1` pytest **만** |
+| 포맷 | 3행: `status=` / `int6=` (6개, **1-index**) / `codes=` (`INC:zero`, `LINE:{id}`) |
+
+```powershell
+$env:UPDATE_GOLDEN=1; python -m pytest tests/ -v
+Remove-Item Env:UPDATE_GOLDEN -ErrorAction SilentlyContinue
+python -m pytest tests/ -v
+```
+
+### 성공 기준 (Acceptance)
+
+| # | 기준 | 증거 Test ID | 현재 |
+|---|------|--------------|------|
+| AC-1 | 10선×34 Command | T1 | RED ✅ / GREEN ❌ |
+| AC-2 | pass / fail / incomplete | T1~T3 | RED ✅ |
+| AC-3 | `failed_lines` id·sum·expected | T2 | RED ✅ |
+| AC-4 | `pytest tests/ -v` 전부 PASS | — | ❌ |
+| AC-5 | (선택) golden matched | T1+ | ❌ |
+
+### TDD 묶음 순서 (PRD §15)
+
+| 순서 | RED 묶음 | Command |
+|------|----------|---------|
+| 1 | T1~T3 GREEN | `/green-minimal` |
+| 2 | Golden (선택) | `/golden-master` |
+| 3 | REFACTOR | `/refactor-smell` → `/refactor-safe` |
+| 4 | T4~T6, D-LOC-01 | `/red-test-plan` → `/red-skeleton` → … |
 
 ---
 
@@ -96,13 +173,16 @@ result = validate_lines(grid)
 
 ```
 MagicSquare_XX/
-├── docs/PRD.md              # 요구사항 SSOT
-├── src/validate_lines.py    # Command (GREEN 대기)
-├── tests/test_validate_lines.py
-├── .cursor/commands/        # slash commands
-├── .cursor/skills/          # TDD · Docs skills
-├── Report/                  # 세션 보고서
-└── Prompting/               # Transcript
+├── docs/PRD.md                    # 요구사항·테스트 SSOT
+├── src/validate_lines.py          # Command (GREEN 대기)
+├── tests/
+│   ├── test_validate_lines.py     # T1~T3 (RED)
+│   ├── conftest.py                # grid_g1 (D-LOC-01 예정)
+│   └── entity/test_d_loc_01.py    # D-LOC-01 (예정)
+├── .cursor/commands/
+├── .cursor/skills/
+├── Report/
+└── Prompting/
 ```
 
 ---
