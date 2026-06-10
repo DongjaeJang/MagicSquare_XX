@@ -237,7 +237,7 @@ def validate_lines(grid: list[list[int]]) -> dict:
 ### 8.3 Dual-Track
 
 | | Track B — Logic | Track A — UI (Boundary) |
-|---|---|-----------------|-------------------------|
+|---|-----------------|-------------------------|
 | Layer | `entity` | `boundary` |
 | 테스트 | dict 직접 assert | 표시·포맷 (다음 세션) |
 | Mock | Domain Mock **금지** | Boundary Mock (UI 세션) |
