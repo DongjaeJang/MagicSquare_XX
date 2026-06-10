@@ -1,0 +1,3 @@
+status=fail
+int6=0,0,0,0,130,34
+codes=LINE:row:0|LINE:col:1

@@ -1,0 +1,3 @@
+status=incomplete
+int6=1,1,0,0,0,0
+codes=INC:zero

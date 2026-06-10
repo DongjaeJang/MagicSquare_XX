@@ -1,3 +1,4 @@
+from _approval import assert_matches_golden, canonicalize_approval
 from validate_lines import MAGIC, validate_lines
 
 VALID_GRID = [
@@ -18,6 +19,10 @@ def test_pass_when_all_ten_lines_sum_to_magic():
     # Assert
     assert result["status"] == "pass"
     assert result["failed_lines"] == []
+    assert_matches_golden(
+        canonicalize_approval(result, grid=grid),
+        "t1.approved.txt",
+    )
 
 
 def test_incomplete_when_grid_contains_zero():
@@ -31,18 +36,27 @@ def test_incomplete_when_grid_contains_zero():
     # Assert
     assert result["status"] == "incomplete"
     assert result["failed_lines"] == []
+    assert_matches_golden(
+        canonicalize_approval(result, grid=grid),
+        "t2.approved.txt",
+    )
 
 
 def test_fail_reports_wrong_line_id_and_sum():
-    # Arrange: row:0 합이 34가 아님
+    # Arrange: row:0·col:1 합이 34가 아님 (대각선 비포함 셀)
     grid = [row[:] for row in VALID_GRID]
-    grid[0][0] = 99
+    grid[0][1] = 99
 
     # Act
     result = validate_lines(grid)
 
     # Assert
-    assert result["status"] == "fail"
     assert result["failed_lines"] == [
-        {"id": "row:0", "sum": 99 + 3 + 2 + 13, "expected": MAGIC},
+        {"id": "row:0", "sum": 16 + 99 + 2 + 13, "expected": MAGIC},
+        {"id": "col:1", "sum": 99 + 10 + 6 + 15, "expected": MAGIC},
     ]
+    assert result["status"] == "fail"
+    assert_matches_golden(
+        canonicalize_approval(result, grid=grid),
+        "t3.approved.txt",
+    )
