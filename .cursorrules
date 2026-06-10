@@ -1,0 +1,57 @@
+# MagicSquare_XX — Cursor Rules (세션 3 초안)
+
+## 도메인 (Entity)
+
+- 4×4 정수 격자 `grid: list[list[int]]`
+- 셀 값: **0**(빈칸) 또는 **1~16**
+- 마법상수 **MAGIC = 34**
+- **10선** — 행 R1~R4, 열 C1~C4, 대각 D1(주), D2(부)
+- 줄 ID: `row:0`~`row:3`, `col:0`~`col:3`, `diag:main`, `diag:anti`
+- R5: 격자에 `0`이 하나라도 있으면 합 검증 생략 → `incomplete`
+
+## Rule (판정 기준)
+
+- R1~R4: 각 행 합 = 34
+- C1~C4: 각 열 합 = 34
+- D1, D2: 각 대각선 합 = 34
+- 10선 전부 검사. 대각선 누락 금지
+- 세션 3 범위 밖: 1~16 중복·범위 검증, Solver, GridUI, ECB 전체 앱
+
+## Command (Control)
+
+- `validate_lines(grid)` — 10선 합 계산 + 34 비교의 유일한 진입점
+- 반환: `{ status, failed_lines }`
+  - `status`: `"pass"` | `"fail"` | `"incomplete"`
+  - `failed_lines`: fail 시 틀린 줄만 `[{ id, sum, expected: 34 }]`
+  - `incomplete` 시 `failed_lines`는 빈 배열
+- 구현 위치: `src/validate_lines.py`
+
+## Boundary
+
+- 이번 세션 Boundary 없음 (ResultDisplay·GridUI는 다음 세션)
+- 테스트는 반환 dict를 직접 assert
+
+## Test Loop (TDD)
+
+- 순서: **RED → GREEN → REFACTOR** 엄수
+- 응답 첫 줄에 Phase 선언: `Phase: RED` / `Phase: GREEN` / `Phase: REFACTOR`
+- **RED**: `tests/`만 수정. `src/` 변경 금지
+- **GREEN**: 테스트 통과에 필요한 최소 구현만 `src/`에 추가
+- **REFACTOR**: 동작 불변. 테스트 수정 금지
+- 금지: assert 완화, `@pytest.mark.skip`, `xfail`, `pass` placeholder로 우회
+- 테스트: `tests/test_validate_lines.py`, pytest (`pyproject.toml` 설정 따름)
+
+## AI 응답 규칙
+
+- 한국어로 응답
+- 범위 밖 기능(Solver, UI, ECB 분류표만) 제안·구현하지 않음
+- 변경은 요청 범위에 한정. 관련 없는 리팩터·파일 추가 금지
+- `git commit`은 사용자가 명시적으로 요청할 때만 수행
+
+## 프로젝트 구조
+
+```
+src/validate_lines.py   # Command
+tests/test_validate_lines.py
+pyproject.toml          # pytest 설정
+```
